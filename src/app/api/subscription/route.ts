@@ -17,8 +17,7 @@ export async function POST(req: NextRequest) {
             endpoint,
             p256dh: keys.p256dh,
             auth: keys.auth,
-        }).onConflictDoUpdate({
-            target: subscriptions.endpoint,
+        }).onDuplicateKeyUpdate({
             set: {
                 p256dh: keys.p256dh,
                 auth: keys.auth,
