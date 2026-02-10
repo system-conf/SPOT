@@ -14,8 +14,15 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "SPOT - Simple Personal Output Trigger",
-  description: "Personal push notification gateway for webhooks",
+  description: "Self-hosted webhook-to-push notification gateway",
   manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/LOGO.svg", type: "image/svg+xml" },
+      { url: "/icons/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: "/LOGO.svg",
+  },
 };
 
 
