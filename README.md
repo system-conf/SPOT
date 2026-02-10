@@ -20,6 +20,7 @@ SPOT transforms any webhook into instant mobile/desktop push notifications. Perf
 | Feature | Description |
 |---------|-------------|
 | 📡 **Multi-Channel System** | Organize notifications with unique API keys per channel |
+| 🖼️ **Rich Notifications** | Support for large images and custom badges |
 | 🎯 **Actionable Buttons** | Add click-to-action buttons to notifications (e.g., "View Dashboard", "Acknowledge") |
 | 📊 **Analytics Dashboard** | Track delivery rates, channel activity, and 7-day trends |
 | ⏰ **Scheduled Notifications** | Cron-based scheduling with daily/weekly/monthly repeats |
@@ -104,12 +105,29 @@ curl -X POST https://your-spot.vercel.app/api/notify \
     "title": "Deployment Success",
     "body": "v2.0 is now live in production!",
     "url": "https://yourapp.com/dashboard",
+    "image": "https://example.com/large-image.jpg",
+    "badge": "https://example.com/badge.png",
     "actions": [
       {"title": "View Logs", "url": "/logs"},
       {"title": "Rollback", "url": "/rollback"}
     ]
   }'
 ```
+
+---
+
+## 🧪 Testing
+
+You can easily test your SPOT instance using the included script:
+
+1. Ensure your `.env` has the correct `API_SECRET`.
+2. Run the test script:
+
+```bash
+node -r dotenv/config send-test-notification.js
+```
+
+This sends a rich notification (with image and badge) to all subscribers of the global channel.
 
 ### Using Channel API Keys
 
