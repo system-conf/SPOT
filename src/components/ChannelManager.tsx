@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { Radio, Key, Check, Trash2 } from "lucide-react";
 
 type Channel = {
     id: number;
@@ -60,7 +61,7 @@ export default function ChannelManager() {
     return (
         <div className="p-6 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
             <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                <span className="text-xl">📡</span>
+                <Radio className="w-5 h-5 text-purple-400" />
                 Kanallar
             </h3>
 
@@ -115,15 +116,25 @@ export default function ChannelManager() {
                             <div className="flex items-center gap-2">
                                 <button
                                     onClick={() => copyKey(ch.apiKey, ch.id)}
-                                    className="text-xs px-3 py-1 bg-white/5 hover:bg-white/10 rounded-lg font-mono text-gray-400 hover:text-white transition-colors"
+                                    className="text-xs px-3 py-1 bg-white/5 hover:bg-white/10 rounded-lg font-mono text-gray-400 hover:text-white transition-colors flex items-center gap-1"
                                 >
-                                    {copiedId === ch.id ? "✅ Kopyalandı!" : "🔑 API Key"}
+                                    {copiedId === ch.id ? (
+                                        <>
+                                            <Check className="w-3 h-3 text-green-400" />
+                                            <span>Kopyalandı!</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Key className="w-3 h-3" />
+                                            <span>API Key</span>
+                                        </>
+                                    )}
                                 </button>
                                 <button
                                     onClick={() => deleteChannel(ch.id)}
                                     className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-all text-xs px-2 py-1"
                                 >
-                                    🗑️
+                                    <Trash2 className="w-4 h-4" />
                                 </button>
                             </div>
                         </div>

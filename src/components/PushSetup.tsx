@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Bell, CheckCircle2 } from "lucide-react";
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
 
@@ -64,20 +65,28 @@ export default function PushSetup() {
 
     return (
         <div className="flex flex-col items-center gap-4 p-6 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
-            <h2 className="text-xl font-bold text-white">Bildirim Ayarları</h2>
-            <p className="text-gray-400 text-center text-sm">
-                Webhook bildirimlerini almak için lütfen bildirimleri etkinleştirin.
-            </p>
+            <div className="p-3 bg-blue-500/10 rounded-full">
+                <Bell className="w-8 h-8 text-blue-400" />
+            </div>
+
+            <div className="text-center">
+                <h2 className="text-xl font-bold text-white">Bildirim Ayarları</h2>
+                <p className="text-gray-400 text-sm mt-1">
+                    Webhook bildirimlerini almak için etkinleştirin.
+                </p>
+            </div>
 
             {isSubscribed ? (
-                <div className="text-green-400 font-medium flex items-center gap-2">
-                    <span>✓</span> Bildirimler Aktif
+                <div className="px-4 py-2 bg-green-500/10 border border-green-500/20 rounded-full text-green-400 font-medium flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Bildirimler Aktif</span>
                 </div>
             ) : (
                 <button
                     onClick={subscribeToPush}
-                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-full font-semibold transition-all shadow-lg shadow-blue-900/40"
+                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-full font-semibold transition-all shadow-lg shadow-blue-900/40 flex items-center gap-2"
                 >
+                    <Bell className="w-4 h-4" />
                     Bildirimleri Aç
                 </button>
             )}

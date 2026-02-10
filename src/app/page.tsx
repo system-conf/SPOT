@@ -4,6 +4,7 @@ import AnalyticsDashboard from "@/components/AnalyticsDashboard";
 import { db } from "@/db";
 import { notifications, channels, type Notification, type Channel } from "@/db/schema";
 import { desc, eq } from "drizzle-orm";
+import { Zap, History, Radio } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,11 @@ export default async function Home() {
 
       <div className="max-w-5xl mx-auto px-6 py-12">
         <header className="mb-16 text-center">
+          <div className="flex justify-center mb-4">
+            <div className="p-4 bg-white/5 rounded-full border border-white/10 shadow-[0_0_40px_-10px_rgba(59,130,246,0.5)]">
+              <Radio className="w-12 h-12 text-blue-400" />
+            </div>
+          </div>
           <h1 className="text-6xl font-black bg-clip-text text-transparent bg-gradient-to-b from-white to-gray-500 mb-4 tracking-tight">
             SPOT
           </h1>
@@ -65,7 +71,7 @@ export default async function Home() {
         {/* Webhook Usage */}
         <section className="p-6 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 mb-8">
           <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-            <span className="text-xl">⚡</span>
+            <Zap className="w-5 h-5 text-yellow-400" />
             Webhook Kullanımı
           </h3>
           <div className="bg-black/40 p-4 rounded-xl font-mono text-xs text-blue-300 overflow-x-auto space-y-1">
@@ -80,7 +86,7 @@ export default async function Home() {
         {/* Notification History */}
         <section className="p-6 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
           <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-            <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+            <History className="w-5 h-5 text-blue-400" />
             Bildirim Geçmişi
           </h3>
 
@@ -106,31 +112,26 @@ export default async function Home() {
                             {ch.name}
                           </span>
                         )}
-                        <h4 className="font-semibold text-blue-400">{n.title}</h4>
+                        <h4 className="font-semibold text-white">{n.title}</h4>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-[9px] px-1.5 py-0.5 rounded ${n.status === "sent"
-                          ? "bg-green-500/10 text-green-400"
-                          : "bg-red-500/10 text-red-400"
-                          }`}>
-                          {n.status === "sent" ? "✓" : "✗"}
-                        </span>
-                        <span className="text-[10px] text-gray-500 font-mono">
-                          {n.sentAt ? new Date(n.sentAt).toLocaleTimeString() : ""}
-                        </span>
-                      </div>
+                      <span className="text-[10px] text-gray-500 font-mono">
+                        {n.sentAt ? new Date(n.sentAt).toLocaleTimeString("tr-TR", { hour: '2-digit', minute: '2-digit' }) : ""}
+                      </span>
                     </div>
-                    <p className="text-sm text-gray-300 leading-relaxed">{n.body}</p>
+                    <p className="text-sm text-gray-400 leading-relaxed">{n.body}</p>
+                    {n.url && (
+                      <div className="mt-2">
+                        <a href={n.url} target="_blank" className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1">
+                          🔗 {n.url}
+                        </a>
+                      </div>
+                    )}
                   </div>
                 );
               })
             )}
           </div>
         </section>
-
-        <footer className="mt-20 text-center text-gray-600 text-sm">
-          <p>© 2026 SPOT • Simple Personal Output Trigger</p>
-        </footer>
       </div>
     </main>
   );

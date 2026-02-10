@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { Activity } from "lucide-react";
 
 type Stats = {
     total: number;
@@ -44,7 +45,7 @@ export default function AnalyticsDashboard() {
     return (
         <div className="p-6 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
             <h3 className="text-lg font-bold mb-5 flex items-center gap-2">
-                <span className="text-xl">📊</span>
+                <Activity className="w-5 h-5 text-indigo-400" />
                 İstatistikler
             </h3>
 

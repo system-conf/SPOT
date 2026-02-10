@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { subscriptions, notifications, channels } from "@/db/schema";
 import { sendPushNotification } from "@/lib/push";
-import { eq } from "drizzle-orm";
+import { eq, OneOrMany } from "drizzle-orm";
 
 export async function POST(req: NextRequest) {
     try {
@@ -43,28 +43,41 @@ export async function POST(req: NextRequest) {
 
         const results = await Promise.all(
             allSubscriptions.map(async (sub) => {
-                const result = await sendPushNotification(sub, { title, body, icon, url, actions, requireInteraction });
+                try {
+                    const result = await sendPushNotification(sub, { title, body, icon, url, actions, requireInteraction });
 
-
-                if (result.expired) {
-                    await db.delete(subscriptions).where(eq(subscriptions.id, sub.id));
+                    if (result.expired) {
+                        try {
+                            await db.delete(subscriptions).where(eq(subscriptions.id, sub.id));
+                        } catch (dbError) {
+                            console.error("DB Deletion Error:", dbError);
+                        }
+                    }
+                    return result;
+                } catch (subError: any) {
+                    console.error("Subscription Processing Error:", subError);
+                    return { success: false, error: subError.message };
                 }
-                return result;
             })
         );
 
         const successes = results.filter((r: any) => r.success).length;
         const status = successes > 0 ? "sent" : "failed";
 
-        // Log the notification with channel reference
-        await db.insert(notifications).values({
-            channelId,
-            title,
-            body,
-            icon,
-            url,
-            status,
-        });
+        try {
+            // Log the notification with channel reference
+            await db.insert(notifications).values({
+                channelId,
+                title,
+                body,
+                icon,
+                url,
+                status,
+            });
+        } catch (insertError: any) {
+            console.error("Notification Logging Error:", insertError);
+            // Don't fail the request if logging fails, but log it
+        }
 
         return NextResponse.json({
             success: true,
@@ -74,7 +87,10 @@ export async function POST(req: NextRequest) {
         });
 
     } catch (error: any) {
-        console.error("Webhook Error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error("===== NOTIFY ENDPOINT ERROR =====");
+        console.error("Error message:", error.message);
+        console.error("Error stack:", error.stack);
+        console.error("Full error:", JSON.stringify(error, null, 2));
+        return NextResponse.json({ error: error.message, details: error.toString() }, { status: 500 });
     }
 }
