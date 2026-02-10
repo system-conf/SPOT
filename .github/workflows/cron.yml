@@ -1,0 +1,15 @@
+name: Process Scheduled Notifications
+
+on:
+  schedule:
+    - cron: '*/5 * * * *' # Her 5 dakikada bir çalışır
+  workflow_dispatch: # Manuel tetikleme için
+
+jobs:
+  cron:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call Vercel Cron Endpoint
+        run: |
+          curl -X GET ${{ secrets.VERCEL_APP_URL }}/api/cron/process-scheduled \
+          -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
