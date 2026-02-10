@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
             channelId = channel.id;
         }
 
-        const { title, body, icon, url, actions, requireInteraction } = await req.json();
+        const { title, body, icon, image, badge, url, actions, requireInteraction } = await req.json();
 
         if (!title || !body) {
             return NextResponse.json({ error: "Title and body are required" }, { status: 400 });
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
         const results = await Promise.all(
             allSubscriptions.map(async (sub) => {
                 try {
-                    const result = await sendPushNotification(sub, { title, body, icon, url, actions, requireInteraction });
+                    const result = await sendPushNotification(sub, { title, body, icon, image, badge, url, actions, requireInteraction });
 
                     if (result.expired) {
                         try {
@@ -71,6 +71,7 @@ export async function POST(req: NextRequest) {
                 title,
                 body,
                 icon,
+                // image, // Database schema might need update for image
                 url,
                 status,
             });

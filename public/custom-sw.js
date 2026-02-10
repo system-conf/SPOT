@@ -10,7 +10,8 @@ self.addEventListener("push", (event) => {
     const options = {
         body: data.body || "",
         icon: data.icon || "/icons/icon.svg",
-        badge: "/icons/icon.svg",
+        badge: data.badge || "/icons/icon.svg", // Small monochrome icon for notification bar
+        image: data.image || undefined, // Big picture in the notification
         tag: "spot-" + Date.now(),
         data: {
             url: data.url || "/",
@@ -46,6 +47,9 @@ self.addEventListener("notificationclick", (event) => {
             targetUrl = clickedAction.url;
         }
     }
+
+    // Resolve relative URLs
+    targetUrl = new URL(targetUrl, self.location.origin).href;
 
     event.waitUntil(
         clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {

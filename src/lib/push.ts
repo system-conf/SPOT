@@ -22,6 +22,8 @@ export type PushPayload = {
     title: string;
     body: string;
     icon?: string;
+    image?: string;
+    badge?: string;
     url?: string;
     actions?: PushAction[];
     requireInteraction?: boolean;

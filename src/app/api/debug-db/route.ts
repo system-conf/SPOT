@@ -1,4 +1,5 @@
 export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { subscriptions } from "@/db/schema";
@@ -10,7 +11,7 @@ export async function GET() {
         return NextResponse.json({
             status: "ok",
             subscriptionCount: subCount.length,
-            subscriptions: subCount // Be careful with privacy in logs, but ok for debug
+            subscriptions: subCount
         });
     } catch (error: any) {
         return NextResponse.json({
