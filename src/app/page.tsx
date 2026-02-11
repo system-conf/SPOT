@@ -1,32 +1,63 @@
+import dynamic from "next/dynamic";
+import { Zap, Radio } from "lucide-react";
+
+// ─── Lazy Loaded Components ───────────────────────────────────────
+// Critical components (above the fold) - loaded immediately
 import PushSetup from "@/components/PushSetup";
 import ChannelManager from "@/components/ChannelManager";
-import AnalyticsDashboard from "@/components/AnalyticsDashboard";
-import { db } from "@/db";
-import { notifications, channels, type Notification, type Channel } from "@/db/schema";
-import { desc, eq } from "drizzle-orm";
-import { Zap, History, Radio } from "lucide-react";
 
-export const dynamic = "force-dynamic";
+// Non-critical components - lazy loaded for better initial load time
+const AnalyticsDashboard = dynamic(() => import("@/components/AnalyticsDashboard"), {
+  loading: () => (
+    <div className="p-6 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 animate-pulse">
+      <div className="h-6 bg-white/10 rounded w-40 mb-4" />
+      <div className="grid grid-cols-3 gap-3">
+        <div className="h-20 bg-white/5 rounded-xl" />
+        <div className="h-20 bg-white/5 rounded-xl" />
+        <div className="h-20 bg-white/5 rounded-xl" />
+      </div>
+    </div>
+  ),
+});
 
-export default async function Home() {
-  // Fetch notifications with channel info
-  const notificationsList = await db.select({
-    id: notifications.id,
-    channelId: notifications.channelId,
-    title: notifications.title,
-    body: notifications.body,
-    icon: notifications.icon,
-    url: notifications.url,
-    status: notifications.status,
-    sentAt: notifications.sentAt,
-  })
-    .from(notifications)
-    .orderBy(desc(notifications.sentAt))
-    .limit(15);
+const TemplateManager = dynamic(() => import("@/components/TemplateManager"), {
+  loading: () => (
+    <div className="p-6 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 animate-pulse">
+      <div className="h-6 bg-white/10 rounded w-32 mb-4" />
+      <div className="space-y-3">
+        <div className="h-12 bg-white/5 rounded-xl" />
+        <div className="h-12 bg-white/5 rounded-xl" />
+      </div>
+    </div>
+  ),
+});
 
-  // Fetch all channels for color mapping
-  const channelList = await db.select().from(channels);
-  const channelMap = new Map(channelList.map((c) => [c.id, c]));
+const SubscriptionManager = dynamic(() => import("@/components/SubscriptionManager"), {
+  loading: () => (
+    <div className="p-6 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 animate-pulse">
+      <div className="h-6 bg-white/10 rounded w-32 mb-4" />
+      <div className="space-y-3">
+        <div className="h-12 bg-white/5 rounded-xl" />
+        <div className="h-12 bg-white/5 rounded-xl" />
+      </div>
+    </div>
+  ),
+});
+
+const NotificationHistory = dynamic(() => import("@/components/NotificationHistory"), {
+  loading: () => (
+    <div className="p-6 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 animate-pulse">
+      <div className="h-6 bg-white/10 rounded w-32 mb-4" />
+      <div className="space-y-3">
+        <div className="h-16 bg-white/5 rounded-xl" />
+        <div className="h-16 bg-white/5 rounded-xl" />
+        <div className="h-16 bg-white/5 rounded-xl" />
+      </div>
+    </div>
+  ),
+});
+
+export default function Home() {
 
   return (
     <main className="min-h-screen bg-black text-white selection:bg-blue-500/30">
@@ -68,6 +99,12 @@ export default async function Home() {
           <AnalyticsDashboard />
         </section>
 
+        {/* Templates & Subscriptions */}
+        <section className="grid md:grid-cols-2 gap-6 mb-8">
+          <TemplateManager />
+          <SubscriptionManager />
+        </section>
+
         {/* Webhook Usage */}
         <section className="p-6 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 mb-8">
           <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
@@ -84,53 +121,8 @@ export default async function Home() {
         </section>
 
         {/* Notification History */}
-        <section className="p-6 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
-          <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-            <History className="w-5 h-5 text-blue-400" />
-            Bildirim Geçmişi
-          </h3>
-
-          <div className="space-y-3">
-            {notificationsList.length === 0 ? (
-              <p className="text-gray-500 text-center py-12">Henüz bildirim bulunmuyor.</p>
-            ) : (
-              notificationsList.map((n) => {
-                const ch = n.channelId ? channelMap.get(n.channelId) : null;
-                return (
-                  <div key={n.id} className="p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors border border-transparent hover:border-white/5">
-                    <div className="flex justify-between items-start mb-1">
-                      <div className="flex items-center gap-2">
-                        {ch && (
-                          <span
-                            className="text-[10px] px-2 py-0.5 rounded-full font-medium"
-                            style={{
-                              backgroundColor: `${ch.color}20`,
-                              color: ch.color,
-                              border: `1px solid ${ch.color}40`,
-                            }}
-                          >
-                            {ch.name}
-                          </span>
-                        )}
-                        <h4 className="font-semibold text-white">{n.title}</h4>
-                      </div>
-                      <span className="text-[10px] text-gray-500 font-mono">
-                        {n.sentAt ? new Date(n.sentAt).toLocaleTimeString("tr-TR", { hour: '2-digit', minute: '2-digit' }) : ""}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-400 leading-relaxed">{n.body}</p>
-                    {n.url && (
-                      <div className="mt-2">
-                        <a href={n.url} target="_blank" className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1">
-                          🔗 {n.url}
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                );
-              })
-            )}
-          </div>
+        <section className="mb-8">
+          <NotificationHistory />
         </section>
       </div>
     </main>

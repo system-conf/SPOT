@@ -1,7 +1,7 @@
 require('dotenv').config();
 
 const API_SECRET = process.env.API_SECRET;
-const PORT = 3005; // Using 3005 as confirmed active
+const PORT = 3000; // Using 3000
 
 if (!API_SECRET) {
     console.error("Error: API_SECRET not found in .env");

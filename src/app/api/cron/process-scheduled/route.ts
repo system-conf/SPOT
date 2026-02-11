@@ -2,17 +2,66 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { scheduledNotifications, subscriptions, notifications } from "@/db/schema";
+import {
+    handleCORS,
+    addCORSHeaders,
+    checkIPFilter,
+    logSecurityEvent,
+    createErrorResponse,
+    addSecurityHeaders,
+    getSecurityConfig,
+} from "@/lib/security";
 import { and, eq, lte, sql } from "drizzle-orm";
 import { sendPushNotification } from "@/lib/push";
 
 // Cron endpoint - processes due scheduled notifications
 export async function GET(req: NextRequest) {
     try {
+        // ─── CORS Handling ───────────────────────────────────────────
+        const corsResponse = handleCORS(req, {
+            allowedOrigins: getSecurityConfig().corsAllowedOrigins,
+            allowedMethods: getSecurityConfig().corsAllowedMethods,
+        });
+        if (corsResponse) return corsResponse;
+
+        // ─── IP Filtering ─────────────────────────────────────────────
+        const ipCheck = checkIPFilter(req, {
+            whitelist: getSecurityConfig().ipWhitelist,
+            blacklist: getSecurityConfig().ipBlacklist,
+        });
+        if (!ipCheck.allowed) {
+            logSecurityEvent({
+                ip: req.headers.get("x-forwarded-for") || "unknown",
+                userAgent: req.headers.get("user-agent") || "unknown",
+                method: req.method,
+                path: req.nextUrl.pathname,
+                event: "IP_BLOCKED",
+                details: ipCheck.reason,
+            });
+            return createErrorResponse(ipCheck.reason || "Access denied", 403);
+        }
+
         // Simple auth check (Vercel Cron sends a secret header)
         const authHeader = req.headers.get("authorization");
         if (authHeader !== `Bearer ${process.env.CRON_SECRET || process.env.API_SECRET}`) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            logSecurityEvent({
+                ip: req.headers.get("x-forwarded-for") || "unknown",
+                userAgent: req.headers.get("user-agent") || "unknown",
+                method: req.method,
+                path: req.nextUrl.pathname,
+                event: "AUTH_FAILED",
+                details: { type: "CRON" },
+            });
+            return createErrorResponse("Unauthorized", 401);
         }
+
+        logSecurityEvent({
+            ip: req.headers.get("x-forwarded-for") || "unknown",
+            userAgent: req.headers.get("user-agent") || "unknown",
+            method: req.method,
+            path: req.nextUrl.pathname,
+            event: "CRON_AUTH_SUCCESS",
+        });
 
         const now = new Date();
 
@@ -28,7 +77,8 @@ export async function GET(req: NextRequest) {
             );
 
         if (dueNotifications.length === 0) {
-            return NextResponse.json({ message: "No notifications to process", sent: 0 });
+            const response = NextResponse.json({ message: "No notifications to process", sent: 0 });
+            return addCORSHeaders(addSecurityHeaders(response), req);
         }
 
         const allSubscriptions = await db.select().from(subscriptions);
@@ -85,9 +135,29 @@ export async function GET(req: NextRequest) {
             totalSent++;
         }
 
-        return NextResponse.json({ success: true, processed: totalSent });
+        logSecurityEvent({
+            ip: req.headers.get("x-forwarded-for") || "unknown",
+            userAgent: req.headers.get("user-agent") || "unknown",
+            method: req.method,
+            path: req.nextUrl.pathname,
+            event: "CRON_PROCESSED",
+            details: { processed: totalSent },
+        });
+
+        const response = NextResponse.json({ success: true, processed: totalSent });
+        return addCORSHeaders(addSecurityHeaders(response), req);
     } catch (error: any) {
         console.error("Cron Error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        logSecurityEvent({
+            ip: req.headers.get("x-forwarded-for") || "unknown",
+            userAgent: req.headers.get("user-agent") || "unknown",
+            method: req.method,
+            path: req.nextUrl.pathname,
+            event: "SERVER_ERROR",
+            status: 500,
+            details: { error: error.message },
+        });
+        const errorResponse = createErrorResponse(error.message, 500);
+        return addCORSHeaders(errorResponse, req);
     }
 }

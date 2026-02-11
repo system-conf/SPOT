@@ -12,9 +12,17 @@ import {
     addSecurityHeaders,
     getSecurityConfig,
 } from "@/lib/security";
-import { sql, eq, count, desc } from "drizzle-orm";
-import { cacheStats } from "@/lib/cache";
+import { eq, sql, count } from "drizzle-orm";
+import { calculatePagination, validatePaginationParams, type PaginationOptions, type PaginatedResponse } from "@/lib/pagination";
+import { buildNotificationWhereClause, validateFilterParams, type NotificationFilters } from "@/lib/filters";
 
+// Simple order by clause builder
+function buildOrderByClause(sortBy: string, sortOrder: "asc" | "desc", table: any): any {
+    const column = table[sortBy as keyof typeof table] || table.sentAt;
+    return sortOrder === "asc" ? column : sql`${column} DESC`;
+}
+
+// GET - List notifications with pagination and filtering
 export async function GET(req: NextRequest) {
     try {
         // ─── CORS Handling ───────────────────────────────────────────
@@ -69,74 +77,47 @@ export async function GET(req: NextRequest) {
             return response;
         }
 
-        // Cache kullanarak istatistikleri getir
-        const statsData = await cacheStats("dashboard", async () => {
-            // Total notifications
-            const [totalResult] = await db
-                .select({ total: count() })
-                .from(notifications);
+        // ─── Parse Query Parameters ──────────────────────────────────
+        const { searchParams } = new URL(req.url);
+        const paginationParams = validatePaginationParams(Object.fromEntries(searchParams.entries()));
+        const filterParams = validateFilterParams(Object.fromEntries(searchParams.entries()));
 
-            // Sent vs Failed
-            const statusStats = await db
-                .select({
-                    status: notifications.status,
-                    count: count(),
-                })
+        // ─── Build Query ───────────────────────────────────────────
+        const whereClause = buildNotificationWhereClause(filterParams, notifications);
+        const orderByClause = buildOrderByClause(filterParams.sortBy, filterParams.sortOrder, notifications);
+        const offset = calculateOffset(paginationParams.page, paginationParams.limit);
+
+        // ─── Execute Query ───────────────────────────────────────────
+        const [data] = await db.select()
                 .from(notifications)
-                .groupBy(notifications.status);
+                .where(whereClause)
+                .orderBy(orderByClause)
+                .limit(paginationParams.limit)
+                .offset(offset);
 
-            // Per-channel stats
-            const channelStats = await db
-                .select({
-                    channelId: notifications.channelId,
-                    channelName: channels.name,
-                    channelColor: channels.color,
-                    count: count(),
-                })
-                .from(notifications)
-                .leftJoin(channels, eq(notifications.channelId, channels.id))
-                .groupBy(notifications.channelId, channels.name, channels.color);
+        // ─── Get Total Count ─────────────────────────────────────
+        const [{ total }] = await db.select({ total: count() }).from(notifications).where(whereClause);
 
-            // Last 7 days activity (daily counts)
-            const dailyStats = await db
-                .select({
-                    date: sql<string>`DATE(sent_at)`.as("date"),
-                    count: count(),
-                })
-                .from(notifications)
-                .where(sql`sent_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)`)
-                .groupBy(sql`DATE(sent_at)`)
-                .orderBy(sql`DATE(sent_at)`);
+        // ─── Get Channel Info ───────────────────────────────────────
+        const channelList = await db.select().from(channels);
+        const channelMap = new Map(channelList.map((c) => [c.id, c]));
 
-            // Recent 5 notifications
-            const recent = await db
-                .select()
-                .from(notifications)
-                .orderBy(desc(notifications.sentAt))
-                .limit(5);
+        // ─── Build Response ───────────────────────────────────────────
+        const enrichedData = data.map((n) => ({
+            ...n,
+            channel: n.channelId ? channelMap.get(n.channelId) : null,
+        }));
 
-            const sent = statusStats.find((s) => s.status === "sent")?.count || 0;
-            const failed = statusStats.find((s) => s.status === "failed")?.count || 0;
+        const pagination = calculatePagination(total, paginationParams.page, paginationParams.limit);
 
-            return {
-                total: totalResult.total,
-                sent,
-                failed,
-                successRate: totalResult.total > 0 ? Math.round((Number(sent) / totalResult.total) * 100) : 100,
-                channelStats: channelStats.map((c) => ({
-                    name: c.channelName || "Global",
-                    color: c.channelColor || "#6B7280",
-                    count: c.count,
-                })),
-                dailyStats,
-                recent,
-            };
+        const response = NextResponse.json({
+            data: enrichedData,
+            filters: filterParams,
+            pagination,
         });
 
-        const response = NextResponse.json(statsData);
         return addCORSHeaders(addSecurityHeaders(response), req);
     } catch (error: any) {
-        console.error("Stats Error:", error);
         logSecurityEvent({
             ip: req.headers.get("x-forwarded-for") || "unknown",
             userAgent: req.headers.get("user-agent") || "unknown",

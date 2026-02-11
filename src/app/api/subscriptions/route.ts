@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { scheduledNotifications } from "@/db/schema";
+import { subscriptions } from "@/db/schema";
 import {
     lenientRateLimit,
     handleCORS,
@@ -12,9 +12,9 @@ import {
     addSecurityHeaders,
     getSecurityConfig,
 } from "@/lib/security";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 
-// GET - List scheduled notifications
+// GET - List all subscriptions
 export async function GET(req: NextRequest) {
     try {
         // ─── CORS Handling ───────────────────────────────────────────
@@ -69,8 +69,9 @@ export async function GET(req: NextRequest) {
             return response;
         }
 
-        const scheduled = await db.select().from(scheduledNotifications);
-        const response = NextResponse.json(scheduled);
+        const allSubscriptions = await db.select().from(subscriptions).orderBy(desc(subscriptions.createdAt));
+
+        const response = NextResponse.json(allSubscriptions);
         return addCORSHeaders(addSecurityHeaders(response), req);
     } catch (error: any) {
         logSecurityEvent({
@@ -87,105 +88,7 @@ export async function GET(req: NextRequest) {
     }
 }
 
-// POST - Create a scheduled notification
-export async function POST(req: NextRequest) {
-    try {
-        // ─── CORS Handling ───────────────────────────────────────────
-        const corsResponse = handleCORS(req, {
-            allowedOrigins: getSecurityConfig().corsAllowedOrigins,
-            allowedMethods: getSecurityConfig().corsAllowedMethods,
-        });
-        if (corsResponse) return corsResponse;
-
-        // ─── IP Filtering ─────────────────────────────────────────────
-        const ipCheck = checkIPFilter(req, {
-            whitelist: getSecurityConfig().ipWhitelist,
-            blacklist: getSecurityConfig().ipBlacklist,
-        });
-        if (!ipCheck.allowed) {
-            logSecurityEvent({
-                ip: req.headers.get("x-forwarded-for") || "unknown",
-                userAgent: req.headers.get("user-agent") || "unknown",
-                method: req.method,
-                path: req.nextUrl.pathname,
-                event: "IP_BLOCKED",
-                details: ipCheck.reason,
-            });
-            return createErrorResponse(ipCheck.reason || "Access denied", 403);
-        }
-
-        // ─── Rate Limiting ───────────────────────────────────────────
-        const rateLimitResult = await lenientRateLimit(req);
-        if (!rateLimitResult.success) {
-            logSecurityEvent({
-                ip: req.headers.get("x-forwarded-for") || "unknown",
-                userAgent: req.headers.get("user-agent") || "unknown",
-                method: req.method,
-                path: req.nextUrl.pathname,
-                event: "RATE_LIMIT_EXCEEDED",
-                details: {
-                    limit: rateLimitResult.limit,
-                    resetTime: new Date(rateLimitResult.resetTime).toISOString(),
-                },
-            });
-
-            const response = createErrorResponse(
-                "Too many requests. Please try again later.",
-                429,
-                {
-                    resetTime: new Date(rateLimitResult.resetTime).toISOString(),
-                }
-            );
-            response.headers.set("Retry-After", Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000).toString());
-            response.headers.set("X-RateLimit-Limit", rateLimitResult.limit.toString());
-            response.headers.set("X-RateLimit-Remaining", rateLimitResult.remaining.toString());
-            return response;
-        }
-
-        const { channelId, title, body, icon, url, scheduledAt, timezone, repeat } = await req.json();
-
-        if (!title || !body || !scheduledAt) {
-            return createErrorResponse("Title, body, and scheduledAt are required", 400);
-        }
-
-        const [result] = await db.insert(scheduledNotifications).values({
-            channelId,
-            title,
-            body,
-            icon,
-            url,
-            scheduledAt: new Date(scheduledAt),
-            timezone: timezone || "Europe/Istanbul",
-            repeat: repeat || "none",
-        });
-
-        logSecurityEvent({
-            ip: req.headers.get("x-forwarded-for") || "unknown",
-            userAgent: req.headers.get("user-agent") || "unknown",
-            method: req.method,
-            path: req.nextUrl.pathname,
-            event: "SCHEDULE_CREATED",
-            details: { title, scheduledAt },
-        });
-
-        const response = NextResponse.json({ success: true, id: result.insertId });
-        return addCORSHeaders(addSecurityHeaders(response), req);
-    } catch (error: any) {
-        logSecurityEvent({
-            ip: req.headers.get("x-forwarded-for") || "unknown",
-            userAgent: req.headers.get("user-agent") || "unknown",
-            method: req.method,
-            path: req.nextUrl.pathname,
-            event: "SERVER_ERROR",
-            status: 500,
-            details: { error: error.message },
-        });
-        const errorResponse = createErrorResponse(error.message, 500);
-        return addCORSHeaders(errorResponse, req);
-    }
-}
-
-// DELETE - Cancel a scheduled notification
+// DELETE - Delete a subscription
 export async function DELETE(req: NextRequest) {
     try {
         // ─── CORS Handling ───────────────────────────────────────────
@@ -241,16 +144,19 @@ export async function DELETE(req: NextRequest) {
         }
 
         const { id } = await req.json();
-        await db.update(scheduledNotifications)
-            .set({ status: "cancelled" })
-            .where(eq(scheduledNotifications.id, id));
+
+        if (!id) {
+            return createErrorResponse("Subscription ID is required", 400);
+        }
+
+        await db.delete(subscriptions).where(eq(subscriptions.id, id));
 
         logSecurityEvent({
             ip: req.headers.get("x-forwarded-for") || "unknown",
             userAgent: req.headers.get("user-agent") || "unknown",
             method: req.method,
             path: req.nextUrl.pathname,
-            event: "SCHEDULE_CANCELLED",
+            event: "SUBSCRIPTION_DELETED",
             details: { id },
         });
 

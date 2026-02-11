@@ -8,6 +8,27 @@
       "when": 1770722687243,
       "tag": "0000_unusual_guardian",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1770820559810,
+      "tag": "0001_talented_weapon_omega",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1770831951721,
+      "tag": "0002_volatile_domino",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1739266920000,
+      "tag": "0003_performance_indexes",
+      "breakpoints": true
     }
   ]
 }
