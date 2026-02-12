@@ -1,6 +1,6 @@
 // ─── Filtering Helpers ──────────────────────────────────────────
 
-import { eq, like, or, and, gte, lte } from "drizzle-orm";
+import { eq, like, or, and, gte, lte, desc } from "drizzle-orm";
 
 export interface NotificationFilters {
     channelId?: number;
@@ -51,7 +51,7 @@ export function buildNotificationWhereClause(filters: NotificationFilters, notif
  */
 export function buildOrderByClause(sortBy: string, sortOrder: "asc" | "desc", notifications: any) {
     const column = notifications[sortBy as keyof typeof notifications] || notifications.sentAt;
-    return sortOrder === "asc" ? column : column;
+    return sortOrder === "asc" ? column : desc(column);
 }
 
 /**
