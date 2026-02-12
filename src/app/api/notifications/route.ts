@@ -12,15 +12,10 @@ import {
     addSecurityHeaders,
     getSecurityConfig,
 } from "@/lib/security";
-import { eq, sql, count } from "drizzle-orm";
-import { calculatePagination, validatePaginationParams, type PaginationOptions, type PaginatedResponse } from "@/lib/pagination";
-import { buildNotificationWhereClause, validateFilterParams, type NotificationFilters } from "@/lib/filters";
-
-// Simple order by clause builder
-function buildOrderByClause(sortBy: string, sortOrder: "asc" | "desc", table: any): any {
-    const column = table[sortBy as keyof typeof table] || table.sentAt;
-    return sortOrder === "asc" ? column : sql`${column} DESC`;
-}
+import { eq, count } from "drizzle-orm";
+import { calculatePagination, calculateOffset, validatePaginationParams, type PaginationOptions, type PaginatedResponse } from "@/lib/pagination";
+import { buildNotificationWhereClause, buildOrderByClause, validateFilterParams, type NotificationFilters } from "@/lib/filters";
+import type { Notification } from "@/db/schema";
 
 // GET - List notifications with pagination and filtering
 export async function GET(req: NextRequest) {
@@ -84,11 +79,11 @@ export async function GET(req: NextRequest) {
 
         // ─── Build Query ───────────────────────────────────────────
         const whereClause = buildNotificationWhereClause(filterParams, notifications);
-        const orderByClause = buildOrderByClause(filterParams.sortBy, filterParams.sortOrder, notifications);
+        const orderByClause = buildOrderByClause(filterParams.sortBy || "sentAt", filterParams.sortOrder || "desc", notifications);
         const offset = calculateOffset(paginationParams.page, paginationParams.limit);
 
         // ─── Execute Query ───────────────────────────────────────────
-        const [data] = await db.select()
+        const data = await db.select()
                 .from(notifications)
                 .where(whereClause)
                 .orderBy(orderByClause)
@@ -103,7 +98,7 @@ export async function GET(req: NextRequest) {
         const channelMap = new Map(channelList.map((c) => [c.id, c]));
 
         // ─── Build Response ───────────────────────────────────────────
-        const enrichedData = data.map((n) => ({
+        const enrichedData = data.map((n: Notification) => ({
             ...n,
             channel: n.channelId ? channelMap.get(n.channelId) : null,
         }));

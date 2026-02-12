@@ -4,6 +4,8 @@ All notable changes to SPOT will be documented in this file.
 
 ## [2.1.0] - 2026-02-11
 
+> **Özet:** Bu sürümde uygulamanın hızı ve güvenliği üzerinde durulmuştur. Kapsamlı bir önbellekleme (caching) sistemi eklenmiş, veritabanı sorguları optimize edilmiş ve modern resim formatları (AVIF/WebP) ile yükleme süreleri düşürülmüştür.
+
 ### 🚀 Performance Optimizations
 
 ### ⚡ Caching System
@@ -99,6 +101,8 @@ All notable changes to SPOT will be documented in this file.
 ### 🔨 Internal Changes
 - Created `src/lib/cache.ts` - Comprehensive caching library
 - Updated `src/lib/redis-rate-limit.ts` - Singleton pattern + fallback
+- Created `src/lib/validations.ts` - Zod-based input validation schemas
+- Created `src/lib/security-logger.ts` - Security event logging system
 - Updated `scripts/migrate.js` - Added performance indexes
 - Updated `drizzle/meta/_journal.json` - Migration tracking
 - Created `drizzle/meta/0003_snapshot.json` - Migration snapshot
@@ -114,6 +118,8 @@ All notable changes to SPOT will be documented in this file.
 ---
 
 ## [2.0.0] - 2026-02-11
+
+> **Özet:** SPOT projesinin ilk büyük güncellemesi! Bildirim şablonları, gelişmiş filtreleme özellikli bildirim geçmişi, abonelik yönetimi ve kapsamlı güvenlik katmanı (Rate Limiting, IP Whitelist, Webhook Signature) eklenmiştir.
 
 ### 🎉 Major Release - Core Features & Security Improvements
 
